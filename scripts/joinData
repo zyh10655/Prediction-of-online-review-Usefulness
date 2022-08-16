@@ -1,0 +1,3 @@
+#!/bin/bash
+
+sqlite3 -header -csv ./database/YelpData.db < ./database/scripts/joinTables.sql > preprocessing/processed_data/joined.csv

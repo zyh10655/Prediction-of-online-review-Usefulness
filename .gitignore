@@ -2,6 +2,8 @@
 preprocessing/.ipynb_checkpoints
 # raw Yelp data
 preprocessing/raw_data/yelp_academic_dataset_*.json
+# joined data
+preprocessing/processed_data/joined.csv
 
 ## database
 database/YelpData.db*

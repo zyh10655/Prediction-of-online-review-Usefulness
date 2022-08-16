@@ -13,6 +13,7 @@ To run anything in `scripts/`, run from the project root directory:
 - `exportConda` & `importConda`: export or import the conda environment via `environment.yml`. Used for recreating a consistent conda environment.
 - `startJupyter`: Starts a jupyter lab server. Open jupyter in your browser by clicking on the URL printed out on the terminal.
 - `initDB`: Create a new database file with empty tables (see `database/scripts/createTables.sql`). **Deletes old database file if exists**.
+- `joinData`: Joins and then returns the relevant data for further pre-processing.
 
 ## Raw Data
 
@@ -40,6 +41,8 @@ To deactivate:
 
 ## Preprocessing
 
-### Importing raw data into SQL database
-
+- Importing raw data into SQL database:
 Run `initDB` (see scripts) first. Then run `importYelp.ipynb` to import data into SQL.
+
+- Joining data together:
+Run `joinData`.
