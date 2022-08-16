@@ -23,7 +23,7 @@ CREATE TABLE user (
     name TEXT,
     review_count INTEGER,
     yelping_since TEXT,
-    friends TEXT,
+    friends_count INTEGER,
     useful INTEGER,
     funny INTEGER,
     cool INTEGER,
