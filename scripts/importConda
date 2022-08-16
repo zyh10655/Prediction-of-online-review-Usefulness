@@ -1,0 +1,4 @@
+#!/bin/bash
+
+# Creates a new conda environment from yml.
+conda env create -f environment.yml

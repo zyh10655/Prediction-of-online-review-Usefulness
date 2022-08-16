@@ -1,0 +1,5 @@
+#!/bin/bash
+
+# starts a jupyter lab server. The no-browser argument
+# prevents an error when launching from shell.
+jupyter lab --no-browser

@@ -1,0 +1,7 @@
+#!/bin/bash
+
+# removes database if already exist
+rm -f ./database/YelpData.db*
+
+# initializes the database with tables
+sqlite3 ./database/YelpData.db < ./database/scripts/createTables.sql

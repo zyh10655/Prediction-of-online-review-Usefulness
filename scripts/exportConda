@@ -1,0 +1,6 @@
+#!/bin/bash
+
+# creates a YAML dictating the packages in the environment. For
+# reproducing environemtn on other machines. Removes the unnecessary
+# directory path prefix.
+conda env export -c conda-forge | grep -v "^prefix: " > environment.yml
