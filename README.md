@@ -30,6 +30,14 @@ running the script `./scripts/importConda`. The libraries and tools included
 are those in CS 762 (numpy, scikit-learn, pandas, jupyterlab, matplotlib). More
 can be added as needed.
 
+Make sure to activate the environment by running:
+
+`conda activate CS760`
+
+To deactivate:
+
+`conda deactivate`
+
 ## Preprocessing
 
 ### Importing raw data into SQL database
