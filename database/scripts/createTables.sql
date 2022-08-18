@@ -2,7 +2,8 @@
 PRAGMA foreign_keys = ON;
 
 CREATE TABLE business (
-    business_id TEXT PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    business_id TEXT NOT NULL UNIQUE,
     name TEXT,
     address TEXT,
     city TEXT,
@@ -19,7 +20,8 @@ CREATE TABLE business (
 );
 
 CREATE TABLE user (
-    user_id TEXT PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL UNIQUE,
     name TEXT,
     review_count INTEGER,
     yelping_since TEXT,
@@ -44,9 +46,10 @@ CREATE TABLE user (
 );
 
 CREATE TABLE review (
-    review_id TEXT PRIMARY KEY,
-    user_id TEXT,
-    business_id TEXT,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    review_id TEXT NOT NULL UNIQUE,
+    user_id TEXT NOT NULL,
+    business_id TEXT NOT NULL,
     stars INTEGER,
     date TEXT,
     text TEXT,

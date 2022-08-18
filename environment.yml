@@ -22,6 +22,7 @@ dependencies:
   - certifi=2022.6.15=py38h578d9bd_0
   - cffi=1.15.1=py38h4a40e3a_0
   - charset-normalizer=2.1.0=pyhd8ed1ab_0
+  - cramjam=2.5.0=py38ha8db356_0
   - cryptography=37.0.4=py38h2b5fc30_0
   - cycler=0.11.0=pyhd8ed1ab_0
   - debugpy=1.6.0=py38hfa26641_0
@@ -29,8 +30,10 @@ dependencies:
   - defusedxml=0.7.1=pyhd8ed1ab_0
   - entrypoints=0.4=pyhd8ed1ab_0
   - executing=0.10.0=pyhd8ed1ab_0
+  - fastparquet=0.8.1=py38h71d37f0_0
   - flit-core=3.7.1=pyhd8ed1ab_0
   - freetype=2.10.4=hca18f0e_2
+  - fsspec=2022.7.1=pyhd8ed1ab_0
   - icu=67.1=he1b5a44_0
   - idna=3.3=pyhd8ed1ab_0
   - importlib-metadata=4.11.4=py38h578d9bd_0

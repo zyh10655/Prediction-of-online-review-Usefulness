@@ -42,4 +42,6 @@ To deactivate:
 
 - Importing raw data & saving to disk:
 Run `initDB` (see scripts) first. Then run `importYelp.ipynb` to import data
-into SQL, join relevant columns, and save to disk as a compressed file `preprocessing/processed_data/joined.pickle.bz2`
+into SQL, join relevant columns, and save to disk as a compressed file `preprocessing/processed_data/joined.parquet.snappy`
+- Note: this requires `fastparquet` package. Should already be installed if you
+duplicated the conda environment.
