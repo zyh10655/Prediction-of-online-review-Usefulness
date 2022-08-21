@@ -1,12 +1,17 @@
 ## Preprocessing
 preprocessing/.ipynb_checkpoints
+
 # raw Yelp data
 preprocessing/raw_data/yelp_academic_dataset_*.json
 # joined data
 preprocessing/processed_data/*.parquet.snappy
 **/*.parquet
+
 # fasttextModel
 **/ftt_model/
 
 ## database
 database/YelpData.db*
+
+## ipynb checkpoints
+**/.ipynb_checkpoints/
