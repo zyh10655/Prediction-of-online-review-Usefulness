@@ -6,8 +6,8 @@ preprocessing/raw_data/yelp_academic_dataset_*.json
 # joined data
 preprocessing/processed_data/*.parquet.snappy
 
-# No parquet files
-**/*.parquet
+# No parquet / parquet.snappy files
+**/*.parquet*
 
 # fasttextModel
 **/ftt_model/
