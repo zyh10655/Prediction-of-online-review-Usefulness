@@ -7,9 +7,9 @@ CONFIG = {
     "n_folds" : 3,
     "lr" : 1e-4,
     "batch_size":{
-        "train":64,
-        "valid": 128,
-        "test":128,
+        "train":128,
+        "valid": 256,
+        "test":256,
         "predict":1,
     },
     'persistent_workers':True,

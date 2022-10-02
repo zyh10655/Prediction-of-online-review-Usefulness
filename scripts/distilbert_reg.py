@@ -1,9 +1,11 @@
 from cmath import isnan
+from os import sync
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import pytorch_lightning as pl
+import torchmetrics
 
 from transformers import get_linear_schedule_with_warmup, DistilBertModel
 from sklearn.metrics import mean_squared_error, mean_absolute_error
@@ -34,7 +36,7 @@ class DistilBERTRegressor(pl.LightningModule):
         super().__init__()
         self.save_hyperparameters()
         self.config = config
-        self.dbert = DistilBertModel.from_pretrained(config['bert']['name'])
+        self.dbert = DistilBertModel.from_pretrained(config['bert']['name'], output_attentions=config['bert']['out_attention'])
 
         self.head = nn.Sequential(
             nn.Linear(self.dbert.config.hidden_size, self.config['fc']['linear1']),
@@ -44,7 +46,7 @@ class DistilBERTRegressor(pl.LightningModule):
         )
 
         self.output = nn.Linear(self.dbert.config.hidden_size, 1)
-
+        self.metric = torchmetrics.MeanSquaredError(squared=False, compute_on_step=False)
         
 
     def forward(self, input_ids, attention_mask):
@@ -71,19 +73,14 @@ class DistilBERTRegressor(pl.LightningModule):
 
         input_ids, attention_mask, targets = batch['input_ids'], batch['attention_mask'], batch['target']
         outputs = self(input_ids, attention_mask)
-
-        if torch.isnan(outputs).any():
-            print(input_ids)
-            print(attention_mask)
-            raise Exception("NaN encountered")
         
         loss = self.compute_loss(outputs, targets.type_as(outputs)) # Calculates the loss
+        mae = F.l1_loss(outputs, targets.reshape(-1, 1).type_as(outputs))
 
-        self.log("train_loss", torch.sqrt(loss), prog_bar=True, logger=True, sync_dist=True)
+        self.log("train_loss", torch.sqrt(loss), prog_bar=True, logger=True, sync_dist=True, on_epoch=True, on_step=False)
+        self.log("train_mae", mae, prog_bar=True, logger=True, sync_dist=True, on_epoch=True, on_step=False)
 
-        return {
-            'loss' : loss,
-        }
+        return {'loss' : loss}
 
     def validation_step(self, batch, batch_idx):
 
@@ -92,10 +89,12 @@ class DistilBERTRegressor(pl.LightningModule):
 
         loss = self.compute_loss(outputs, targets.type_as(outputs)) # Calculates the loss
 
-        self.log("val_loss", torch.sqrt(loss), prog_bar=True, logger=True, sync_dist=True)
+        self.log("val_loss", torch.sqrt(loss), prog_bar=True, logger=True, sync_dist=True, on_epoch=True, on_step=False)
 
         return {
-            'val_loss' : loss
+            'val_loss' : loss,
+            "prediction" : outputs,
+            "targets" : targets.reshape(-1, 1)
         }
 
     def test_step(self, batch, batch_idx):
@@ -104,30 +103,15 @@ class DistilBERTRegressor(pl.LightningModule):
         outputs = self(input_ids, attention_mask)
 
         loss = self.compute_loss(outputs, targets.type_as(outputs)) # Calculates the loss
+        mae = F.l1_loss(outputs, targets.reshape(-1, 1).type_as(outputs))
+        self.log("test_loss", torch.sqrt(loss), prog_bar=True, logger=True, sync_dist=True, on_epoch=True, on_step=False)
+        self.log("test_mae", mae, prog_bar=True, logger=True, sync_dist=True, on_epoch=True, on_step=False)
 
         return {
-            'test_loss':loss
+            'test_loss':loss,
+            "prediction" : outputs,
+            "targets" : targets.reshape(-1, 1)
         }
-
-
-    def training_step_end(self, outputs):
-        # outputs = torch.stack([x["loss"] for x in outputs])
-        outputs = outputs['loss']
-        loss = outputs.mean()
-        self.log('train_loss', torch.sqrt(loss))
-
-    def validation_step_end(self, outputs):
-        # outputs = torch.stack([x["val_loss"] for x in outputs])
-        outputs = outputs['val_loss']
-        loss = outputs.mean()
-        self.log('val_loss', torch.sqrt(loss))
-
-    def test_step_end(self, outputs):
-        # outputs = torch.stack([x["test_loss"] for x in outputs])
-        outputs = outputs['test_loss']
-        loss = outputs.mean()
-        self.log('test_loss', torch.sqrt(loss))
-
     
 
 
@@ -135,10 +119,10 @@ class DistilBERTRegressor(pl.LightningModule):
         input_ids, attention_mask, targets = batch['input_ids'], batch['attention_mask'], batch['target']
         return self(input_ids, attention_mask)
 
-    def on_predict_epoch_end(self, results):
-        if self.trainer.is_global_zero:
-            all_preds = self.all_gather(results[0])
-            return all_preds
+    # def on_predict_epoch_end(self, results):
+    #     if self.trainer.is_global_zero:
+    #         all_preds = self.all_gather(results[0])
+    #         return all_preds
     
     def configure_optimizers(self):
         optimizer = optim.Adam(self.parameters(), lr=self.config['lr'], weight_decay=self.config['weight_decay'])

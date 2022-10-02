@@ -34,3 +34,6 @@ database/YelpData.db*
 
 ## study.db
 **/study.db
+
+## models
+**/scripts/models/
