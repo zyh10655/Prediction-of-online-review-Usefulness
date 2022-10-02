@@ -21,3 +21,19 @@ database/YelpData.db*
 
 ## transformed data
 **/data/
+
+## ligthning logs
+**/lightning_logs/
+
+## checkpoints
+**/checkpoints/
+**/checkpoints_train/
+
+## pycache
+**/__pycache__/
+
+## study.db
+**/study.db
+
+## models
+**/scripts/models/
