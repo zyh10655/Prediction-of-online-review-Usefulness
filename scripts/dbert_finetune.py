@@ -17,6 +17,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 from sklearn.model_selection import KFold
 from sklearn.metrics import mean_absolute_error, mean_squared_error
+from functools import partial
 from copy import deepcopy
 from collections import defaultdict
 from tqdm import tqdm
@@ -38,6 +39,14 @@ def merge_data(df1:pd.DataFrame, df2:pd.DataFrame, on:str, suffixes:tuple=None) 
     df_merge = df_merge[['r_text', 'r_useful']]
 
     return df_merge
+
+def early_stopping_check(study, trial, early_stopping_rounds=2):
+    current_trial_number = trial.number
+    best_trial_number = study.best_trial.number
+    should_stop = (current_trial_number - best_trial_number) >= early_stopping_rounds
+    if should_stop:
+        print("Early stopping detected!!")
+        study.stop()
 
 
 
@@ -90,9 +99,9 @@ def objective(trial:optuna.Trial, train:pd.DataFrame, val:pd.DataFrame):
     trainer.fit(model, train_dl, val_dl)
  
     # curr_loss = trainer.callback_metrics['val_loss'].item()
-    score = trainer.validate(model, val_dl)
+    score = trainer.test(model, val_dl)
     print(score)
-    return score[0]['val_loss']
+    return score[0]['test_loss']
 
 
 
@@ -140,7 +149,7 @@ if __name__ == "__main__":
     study.optimize(
         objective_cv,
         n_trials=12,
-        callbacks= [lambda study, trial: gc.collect()]
+        callbacks=[partial(early_stopping_check, early_stopping_rounds=2)]
     )
 
     print(f"Number of finished trials : {len(study.trials)}")

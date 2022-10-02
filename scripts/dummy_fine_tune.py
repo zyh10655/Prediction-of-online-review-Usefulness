@@ -97,9 +97,10 @@ def objective(trial:optuna.Trial, train:pd.DataFrame, val:pd.DataFrame):
     val_dl = dm.val_dataloader()
     trainer.fit(model, train_dl, val_dl)
  
-    score = trainer.validate(model, val_dl)
+    score = trainer.test(model, val_dl)
+    print("<=== SCORE===>")
     print(score)
-    return score[0]['val_loss']
+    return score[0]['test_loss']
 
 
 
