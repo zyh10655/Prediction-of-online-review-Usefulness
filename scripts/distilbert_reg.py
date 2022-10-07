@@ -117,12 +117,20 @@ class DistilBERTRegressor(pl.LightningModule):
 
     def predict_step(self, batch, batch_idx):
         input_ids, attention_mask, targets = batch['input_ids'], batch['attention_mask'], batch['target']
-        return self(input_ids, attention_mask)
+        outputs = self(input_ids, attention_mask)
 
-    # def on_predict_epoch_end(self, results):
-    #     if self.trainer.is_global_zero:
-    #         all_preds = self.all_gather(results[0])
-    #         return all_preds
+        loss = self.compute_loss(outputs, targets.type_as(outputs))
+        mae = F.l1_loss(outputs, targets.reshape(-1, 1).type_as(outputs))
+        
+        self.log("pred_loss", torch.sqrt(loss), prog_bar=True, logger=True, sync_dist=True, on_epoch=True, on_step=False)
+        self.log("pred_mae", mae, prog_bar=True, logger=True, sync_dist=True, on_epoch=True, on_step=False)
+
+        return dict(
+            pred_loss = loss,
+            preds = outputs,
+            targets = targets.reshape(-1, 1)
+        )
+
     
     def configure_optimizers(self):
         optimizer = optim.Adam(self.parameters(), lr=self.config['lr'], weight_decay=self.config['weight_decay'])
