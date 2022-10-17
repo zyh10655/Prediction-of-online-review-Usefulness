@@ -92,9 +92,7 @@ class DistilBERTRegressor(pl.LightningModule):
         self.log("val_loss", torch.sqrt(loss), prog_bar=True, logger=True, sync_dist=True, on_epoch=True, on_step=False)
 
         return {
-            'val_loss' : loss,
-            "prediction" : outputs,
-            "targets" : targets.reshape(-1, 1)
+            'val_loss' : loss.item()
         }
 
     def test_step(self, batch, batch_idx):
@@ -108,9 +106,8 @@ class DistilBERTRegressor(pl.LightningModule):
         self.log("test_mae", mae, prog_bar=True, logger=True, sync_dist=True, on_epoch=True, on_step=False)
 
         return {
-            'test_loss':loss,
-            "prediction" : outputs,
-            "targets" : targets.reshape(-1, 1)
+            'test_loss':loss.item(),
+            "test_mae": mae.item()
         }
     
 

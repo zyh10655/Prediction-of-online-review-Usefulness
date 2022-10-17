@@ -9,12 +9,16 @@ CONFIG = {
         "inner":3,
         "outer":3
     },
+    "repeated":{
+        "rep":6,
+        "folds": 5
+    },
     "lr" : 1e-4,
     "batch_size":{
-        "train":128,
-        "valid": 256,
-        "test":256,
-        "predict":256,
+        "train":64,
+        "valid": 64,
+        "test":128,
+        "predict":128,
     },
     'persistent_workers':True,
     "max_len":300,
@@ -31,8 +35,9 @@ CONFIG = {
     "dropout":0.25,
     "criterion":nn.MSELoss(),
     "file_paths":{
-        "train":"../data/subsampled/100K18F_train_text.parquet.snappy",
-        "test":"../data/subsampled/100K18F_test_text.parquet.snappy"
+        "train":"../data/subsampled/100K35F_train_text.parquet.snappy",
+        "val" : "../data/subsampled/100K35F_val_text.parquet.snappy",
+        "test":"../data/subsampled/100K35F_test_text.parquet.snappy"
     },
     "num_workers":4,
     "pin_memory":True,

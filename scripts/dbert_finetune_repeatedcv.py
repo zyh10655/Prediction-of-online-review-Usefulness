@@ -9,6 +9,7 @@ import optuna
 import sys
 import os
 import gc
+import json
 
 sys.path.append("..")
 
@@ -25,7 +26,7 @@ from scripts.data_module import YelpDataModule
 
 from config import CONFIG
 
-pl.seed_everything(seed=42, workers=True)
+pl.seed_everything(seed=42)
 
 
 
@@ -40,7 +41,7 @@ def early_stopping_check(study:optuna.Study, trial:optuna.Trial, early_stopping_
         study.stop()
 
 
-def score_model(train:pd.DataFrame, test:pd.DataFrame, hyp:dict) -> Tuple[float, float]:
+def score_model(train:pd.DataFrame, test:pd.DataFrame, hyp:dict) -> dict:
 
     """ Function to calculate the generalized test error of the best model """
 
@@ -71,9 +72,10 @@ def score_model(train:pd.DataFrame, test:pd.DataFrame, hyp:dict) -> Tuple[float,
     )
 
     trainer.fit(model, train_loader)
-    score = trainer.test(model, test_loader)
+    train_score = trainer.test(model, train_loader)
+    val_score = trainer.test(model, test_loader)
 
-    print(score)
+    print(val_score)
 
     del model
     del trainer
@@ -83,8 +85,15 @@ def score_model(train:pd.DataFrame, test:pd.DataFrame, hyp:dict) -> Tuple[float,
 
     gc.collect()
     torch.cuda.empty_cache()
+
+    scores = {
+        'train_rmse' : np.mean([train_score[i]['test_loss'] for i in range(len(train_score))]),
+        'train_mae' : np.mean([train_score[i]['test_mae'] for i in range(len(train_score))]),
+        'val_rmse' : np.mean([val_score[i]['test_loss'] for i in range(len(val_score))]),
+        'val_mae' : np.mean([val_score[i]['test_mae'] for i in range(len(val_score))])
+    }
     
-    return np.mean([score[i]['test_loss'] for i in range(len(score))]), np.mean([score[i]['test_mae'] for i in range(len(score))])
+    return scores
 
 
 
@@ -122,7 +131,7 @@ def cv_score(train:pd.DataFrame, val:pd.DataFrame, config:dict) -> float:
     val_dl = dm.val_dataloader()
 
     trainer.fit(model, train_dataloaders=train_dl, val_dataloaders=val_dl)
-
+    
     score = trainer.test(model, val_dl)
     avg_score = np.mean([score[i]['test_loss'] for i in range(len(score))])
 
@@ -141,7 +150,7 @@ def objective(trial:optuna.Trial, data:pd.DataFrame) -> np.array:
     """ Function to select hyperparameter using cross-validation """
 
 
-    kfold = KFold(n_splits=CONFIG['nested']['inner'], shuffle=True, random_state=42)
+    kfold = KFold(n_splits=CONFIG['repeated']['folds'], shuffle=True, random_state=42)
     scores = list()
 
 
@@ -168,7 +177,7 @@ def objective(trial:optuna.Trial, data:pd.DataFrame) -> np.array:
 
     for fold, (train_idx, val_idx) in enumerate(kfold.split(data)):
 
-        print(f"<==== Inner Fold - {fold}====>")
+        print(f"<==== Fold - {fold}====>")
         train, val = data.iloc[train_idx], data.iloc[val_idx]
         val_loss = cv_score(train, val, config)
         scores.append(val_loss)
@@ -181,26 +190,24 @@ def objective(trial:optuna.Trial, data:pd.DataFrame) -> np.array:
 
 
 
-def nested_cross_val(data):
+def repeated_cross_val(train, val):
+    best_hyps = list()
+    scores_final = defaultdict(lambda: list())
 
-    kfold = KFold(n_splits=CONFIG['nested']['outer'], shuffle=True, random_state=42)
+    for rep in range(CONFIG["repeated"]["rep"]):
+        print(f"Repetition : {rep + 1} ")
 
-    scores = defaultdict(lambda: list())
-
-    for fold, (train_idx, val_idx) in enumerate(kfold.split(data)):
-        print(f"<------ Outer Fold - {fold} --------> ")
-
-        train, val = data.iloc[train_idx], data.iloc[val_idx]
+        # train, val = data.iloc[train_idx], data.iloc[val_idx]
         sampler = optuna.samplers.TPESampler(multivariate=True, seed=1234)
         study = optuna.create_study(
-            study_name = f"dbert-fine-tuning-outer-fold{fold}",
+            study_name = f"dbert-fine-tuning-rep-{rep+1}",
             direction = "minimize",
             sampler = sampler, 
             # pruner = optuna.pruners.PatientPruner(optuna.pruners.MedianPruner(), patience=2),
             load_if_exists=True,
             storage=f"sqlite:///study.db"
         )
-
+        train = train.sample(frac=1, random_state=rep)
         func = lambda trial: objective(trial, train)
 
         study.optimize(
@@ -217,20 +224,39 @@ def nested_cross_val(data):
             print(f"{k}:{v}")
             best_hyp[k] = v
 
-        val_score_rmse, val_score_mae = score_model(train, val, best_hyp)
-        print(f'Validation Score (Outer fold) RMSE - {val_score_rmse:.5f}')
-        print(f'Validation Score (Outer fold) MAE - {val_score_mae:.5f}')
-        scores['rmse'].append(val_score_rmse)
-        scores['mae'].append(val_score_mae)
+        best_hyps.append(best_hyp)
+
+
+        scores = score_model(train, val, best_hyp)
+        print(f'Training Score (Outer fold) RMSE - {scores["train_rmse"]:.5f}')
+        print(f'Training Score (Outer fold) MAE - {scores["train_mae"]:.5f}')
+
+        print(f'Validation Score (Outer fold) RMSE - {scores["val_rmse"]:.5f}')
+        print(f'Validation Score (Outer fold) MAE - {scores["val_mae"]:.5f}')
+
+        scores_final['train_rmse'].append(scores["train_rmse"])
+        scores_final['train_mae'].append(scores["train_mae"])
+        
+        scores_final['val_rmse'].append(scores["val_rmse"])
+        scores_final['val_mae'].append(scores["val_mae"])
 
         torch.cuda.empty_cache()
         gc.collect()
 
+    print(f"Generalized TRAINING RMSE : {np.mean(scores_final['train_rmse'])}")
+    print(f"Generalized TRAINING MAE : {np.mean(scores_final['train_mae'])}")
+    print(f"Generalized TRAINING RMSE STD : {np.std(scores_final['train_rmse'])}")
+    print(f"Generalized TRAINING MAE STD : {np.std(scores_final['train_mae'])}")
 
-    print(f"Generalized RMSE : {np.mean(scores['rmse'])}")
-    print(f"Generalized MAE: {np.mean(scores['mae'])}")
+    print(f"Generalized VALIDATION RMSE : {np.mean(scores_final['val_rmse'])}")
+    print(f"Generalized VALIDATION MAE: {np.mean(scores_final['val_mae'])}")
+    print(f"Generalized TRAINING RMSE STD : {np.std(scores_final['val_rmse'])}")
+    print(f"Generalized TRAINING MAE STD : {np.std(scores_final['val_mae'])}")
 
-    return scores
+    with open("best_hyps.json", "w") as fp:
+        json.dump(best_hyps, fp)
+
+    return scores_final
 
 
 
@@ -238,5 +264,7 @@ def nested_cross_val(data):
 if __name__ == "__main__":
 
     df_train = pd.read_parquet(CONFIG["file_paths"]["train"])
-    scores = nested_cross_val(df_train)
+    df_val = pd.read_parquet(CONFIG["file_paths"]["val"])
+    # scores = nested_cross_val(df_train)
+    scores = repeated_cross_val(df_train, df_val)
     print(scores)
