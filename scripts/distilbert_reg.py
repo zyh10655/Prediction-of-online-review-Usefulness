@@ -116,17 +116,7 @@ class DistilBERTRegressor(pl.LightningModule):
         input_ids, attention_mask, targets = batch['input_ids'], batch['attention_mask'], batch['target']
         outputs = self(input_ids, attention_mask)
 
-        loss = self.compute_loss(outputs, targets.type_as(outputs))
-        mae = F.l1_loss(outputs, targets.reshape(-1, 1).type_as(outputs))
-        
-        self.log("pred_loss", torch.sqrt(loss), prog_bar=True, logger=True, sync_dist=True, on_epoch=True, on_step=False)
-        self.log("pred_mae", mae, prog_bar=True, logger=True, sync_dist=True, on_epoch=True, on_step=False)
-
-        return dict(
-            pred_loss = loss,
-            preds = outputs,
-            targets = targets.reshape(-1, 1)
-        )
+        return outputs
 
     
     def configure_optimizers(self):

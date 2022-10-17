@@ -6,6 +6,7 @@ import pytorch_lightning as pl
 import os
 import sys
 import gc
+import time
 
 sys.path.append("..")
 
@@ -18,17 +19,6 @@ from scripts.data_module import YelpDataModule, YelpPredictDataModule
 from best_config import CONFIG
 
 pl.seed_everything(seed=42)
-
-
-def merge_data(df1:pd.DataFrame, df2:pd.DataFrame, on:str, suffixes:tuple=None) -> pd.DataFrame:
-    """ Function to merge the dataframe """
-  
-    if suffixes is None:
-        suffixes = ('_x', '_y')
-    df_merge = pd.merge(df1, df2, on=on, suffixes=suffixes)
-    df_merge = df_merge[['r_text', 'r_useful']]
-
-    return df_merge
 
 
 def train(train:pd.DataFrame):
@@ -85,27 +75,33 @@ if __name__ == "__main__":
     if not os.path.exists("./models/"):
         os.mkdir('./models')
 
-    df_train_main = pd.read_parquet(CONFIG["file_paths"]["main"])
-    df_train_text = pd.read_parquet(CONFIG["file_paths"]["text"])
+    df_train = pd.read_parquet(CONFIG["file_paths"]["train"])
+    df_val = pd.read_parquet(CONFIG["file_paths"]["val"])
+    df_test = pd.read_parquet(CONFIG["file_paths"]["test"])
 
-    df_test_main = pd.read_parquet(CONFIG["test_file_paths"]["main"])
-    df_test_text = pd.read_parquet(CONFIG["test_file_paths"]["text"])
+    print(f'Shape of Training Data : {df_train.shape}')
+    print(f'Shape of Validation Data : {df_val.shape}')
 
-    df_train = merge_data(df_train_text, df_train_main, "r_id", suffixes=("_text", "_main"))
-    df_test = merge_data(df_test_text, df_test_main, "r_id", suffixes=("_text", "_main"))
+    df_train = pd.concat([df_train, df_val], ignore_index=True)
+    
+    print(f'Shape of NEW Training Data : {df_train.shape}')
+    print(f'Shape of Test Data : {df_test.shape}')
 
     torch.cuda.empty_cache()
     gc.collect()
 
     if not os.path.isfile("./models/dbert.ckpt"):
+        start_time = time.time()
         train(df_train)
+        end_time = time.time()
+        print(f'Total Training Time : {end_time - start_time}')
 
     else:
-        train_preds = predict_data(df_train)
-        train_targets = df_train['r_useful'].values
-        rmse, mae = calc_metrics(train_targets, train_preds)
+        # train_preds = predict_data(df_train)
+        # train_targets = df_train['r_useful'].values
+        # rmse, mae = calc_metrics(train_targets, train_preds)
 
-        print(f"Train RMSE: {rmse:.5f} || MAE: {mae:.5f}")
+        # print(f"Train RMSE: {rmse:.5f} || MAE: {mae:.5f}")
 
         test_preds = predict_data(df_test)
         test_targets = df_test['r_useful'].values
