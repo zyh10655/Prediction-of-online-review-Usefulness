@@ -2,6 +2,10 @@
 
 This repositories is for CS760 Group 6. Welcome guys!
 
+Our research topic is:
+
+**Predicting Online Yelp Review Usefulness**
+
 ## Scripts
 
 To run anything in `scripts/`, run from the project root directory:
